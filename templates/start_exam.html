@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Online Exam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    
+    <style>
+    .submit-section {
+    text-align: right;
+    margin-top: 50px;
+    margin-right: 20px;
+}
+ .submit-btn {
+    padding: 10px 20px;
+    margin-top: 50px;
+    font-size: 16px;
+    width: 150px;  /* fixed width */
+}
+  
+.exam-container {
+    width: 95%;
+    max-width:1200px;
+    margin: 20px auto;
+    display:flex;
+    justify-content:space-between;
+}
+
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+#stats,#timer{
+    font-size: 16px;
+    font-weight: 500;
+}
+#timer {
+    background-color: #ffc107;
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#timer::before {
+    content: "⏰";
+}
+
+.exam-body {
+    display: flex;
+    gap: 20px;
+    align-items:flex-start;
+}
+
+.question-section 
+{
+    flex: 3;
+    min-height:500px;
+    padding-right: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.palette-section {
+    flex: 1;
+    border-left:2px solid #999;
+    padding-left: 20px;
+    
+    display: flex;
+    flex-direction:column;
+    justify-content:flex-start;
+    min-height: 500px;
+    box-sizing: border-box;
+}
+.submit-fixed {
+    text-align: right;
+}
+
+.question {
+    display: none;
+}
+
+
+.answered {
+    background: green;
+    color: white;
+}
+ body {
+            background: linear-gradient(to right, #abcbda, #bbf7e1);
+            height: 100vh;
+        }
+        
+.review {
+    background: orange;
+    color: white;
+}
+.palette-btn {
+    width: 40px;
+    height: 40px;
+    margin: 5px;
+    border: 1px solid #333;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    font-weight: bold;
+
+     display: flex;            /* flex to center content */
+    align-items: center;      /* vertical center */
+    justify-content: center;  /* horizontal center */
+    text-align: center;
+
+}
+.palette-btn:hover {
+    background-color: #0d6efd; /* Bootstrap primary */
+    color: white;
+}
+
+.palette-btn.answered {
+    background-color: green;
+    color: white;
+}
+.palette-btn.review {
+    background-color: orange;
+    color: white;
+}
+.palette-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap:10px;
+}
+@media(max-width:768px){
+    .exam-body {
+        flex-direction: row; /* keep row layout */
+        flex-wrap: wrap;     /* allow wrap if screen is too small */
+    }
+    
+    .question-section, .palette-section {
+        flex: 1 1 50%; /* roughly half-half */
+    }
+}
+
+</style>
+</head>
+<body>
+<div class="exam-container"
+     data-total="{{ questions|length }}"
+     data-duration="{{ remaining_time }}"
+     data-current="{{ current_index }}">
+<div style="position: fixed; 
+            bottom: 10px; 
+            right: 10px; 
+            z-index: 100;">
+    <video id="webcam"
+           autoplay
+           muted
+           playsinline
+           style="width:200px; 
+                  height:150px; 
+                  background:black; 
+                  border:2px solid black;">
+    </video>
+</div>    
+<div class="exam-body">
+
+        <div class="question-section">
+            <div class="exam-header d-flex justify-content-between align-items-center mb-3">
+                <div id="stats" 
+                      class="badge bg-primary p-2">
+                         Answered: 0 / {{ questions|length }}
+                </div>
+               
+                <div id="timer" 
+                      class="badge bg-warning p-2">
+                
+                </div>
+        </div>
+            <form id="examForm" method="POST" action="{{ url_for('submit_exam') }}">
+                {% for q in questions %}
+                <div class="question card p-3 mb-3" 
+                     id="question-{{ loop.index0 }}">
+                    <h5 class="mb-3">Question {{ loop.index }}</h5>
+                    <p><strong>{{ q['question'] }}</strong></p>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="question_{{ q.id }}"
+                               value="A"
+                               id="q{{ q.id }}A"
+                               {% if saved_answers.get(q.id) == "A" %} checked {% endif %}>
+                               <label class="form-check-label" for="q{{ q.id }}A">
+                                    {{ q.option_a }}
+                                </label>
+                    </div>
+
+                    <div class="form-check">
+                    <input class="form-check-input"
+                           type="radio"
+                           name="question_{{ q.id }}"
+                           value="B"
+                        id="q{{ q.id }}B"
+                        {% if saved_answers.get(q.id) == "B" %} checked {% endif %}>
+                    <label class="form-check-label" for="q{{ q.id }}B">
+                        {{ q.option_b }}
+                    </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                                type="radio"
+                                name="question_{{ q.id }}"
+                                value="C"
+                                id="q{{ q.id }}C"
+                                {% if saved_answers.get(q.id) == "C" %} checked {% endif %}>
+                        <label class="form-check-label" for="q{{ q.id }}C">
+                            {{ q.option_c }}
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input"
+                                type="radio"
+                                name="question_{{ q.id }}"
+                                value="D"
+                                id="q{{ q.id }}D"
+                                {% if saved_answers.get(q.id) == "D" %} checked {% endif %}>
+                        <label class="form-check-label" for="q{{ q.id }}D">
+                            {{ q.option_d }}
+                        </label>
+                    </div>
+                    <div class="mt-3">
+                        <button type="button"
+                                class="btn btn-warning btn-sm review-btn"
+                                data-index="{{ loop.index0 }}">
+                            Mark for Review
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+           </form>
+           <div class="navigation mt-3">
+            <button class="btn btn-secondary"
+                    onclick="prevQuestion()"
+                    id="prevBtn">
+                Previous
+            </button>
+
+            <button class="btn btn-primary"
+                    onclick="nextQuestion()"
+                    id="nextBtn">
+                Next
+            </button>
+
+            <button class="btn btn-success"
+                    onclick="submitExam()"
+                    id="submitBtn"
+                    style="display:none;">
+                Submit
+            </button>
+         </div>
+        </div>
+
+
+        <div class="palette-section">
+            <div class="palette-grid">
+            {% for q in questions %}
+            <div class="palette-btn"
+                 id="palette-{{ loop.index0 }}"
+                 data-index="{{ loop.index0 }}">
+                {{ loop.index }}
+            </div>
+            {% endfor %}
+            </div>
+            <div class="submit-fixed">
+                <button class="submit-btn" 
+                onclick="submitExam()">
+                    Submit Exam
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+let questions = [];
+let totalQuestions = 0;
+
+window.onload = function() {
+
+    startWebcam(); //strat webcam
+    questions = document.querySelectorAll(".question");
+    totalQuestions = questions.length;
+
+     //  FIRST set current question
+    currentQuestion = Number(
+        document.querySelector(".exam-container").dataset.current
+    ) || 0;
+
+    //  THEN show question
+    showQuestion(currentQuestion);
+
+    // Restore answered palette color
+    document.querySelectorAll("input[type=radio]:checked").forEach(radio => {
+
+    let qIndex = radio.closest(".question").id.split("-")[1];
+    let paletteBtn = document.getElementById("palette-" + qIndex);
+
+    paletteBtn.classList.add("answered");
+
+});
+  
+    // Palette click
+    document.querySelectorAll(".palette-btn").forEach(btn => {
+        btn.addEventListener("click", function() {
+            let index = Number(this.dataset.index);
+            goToQuestion(index);
+        });
+    });
+
+    // Radio change event
+    document.querySelectorAll("input[type=radio]").forEach(radio => {
+        radio.addEventListener("change", function() {
+   
+            
+            let name = this.name;
+            let value = this.value;
+
+           
+            let qIndex = this.closest(".question").id.split("-")[1];
+            let paletteBtn = document.getElementById("palette-" + qIndex);
+
+            paletteBtn.classList.remove("review");
+            paletteBtn.classList.add("answered");
+
+            updateStats();
+        });
+    });
+
+    // Mark for Review button click
+document.querySelectorAll(".review-btn").forEach(btn => {
+    btn.addEventListener("click", function() {
+
+        let index = Number(this.dataset.index);
+        markForReview(index);   // call your existing function
+
+    });
+});
+let totalTime = Number(document.querySelector(".exam-container").dataset.duration);
+    let timerElement = document.getElementById("timer");
+
+    // Guard: Ensure totalTime is valid
+    if (isNaN(totalTime) || totalTime <= 0) {
+        timerElement.innerHTML = "0:00";
+        // If it's 0 or less on load, we might need to submit, but let's be careful.
+        // For now, just ensure it doesn't crash.
+    } else {
+        let countdown = setInterval(function() {
+            let minutes = Math.floor(totalTime / 60);
+            let seconds = totalTime % 60;
+
+            timerElement.innerHTML =
+                minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+
+            if (totalTime <= 0) {
+                clearInterval(countdown);
+                submitExam();
+            }
+            totalTime--;
+        }, 1000);
+    }
+
+    // Security Guards Delay - give the page 5 seconds to settle
+    let guardsEnabled = false;
+    setTimeout(() => {
+        guardsEnabled = true;
+        console.log("Security guards enabled.");
+    }, 5000);
+
+
+//javascript auto save 
+document.querySelectorAll("input[type=radio]").forEach(radio => {
+    radio.addEventListener("change", function() {
+
+        let fullName = this.name;           
+        let questionId = fullName.split("_")[1];
+        let selectedOption = this.value;   // ✅ ADD THIS
+
+        fetch("/save_answer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                question_id: questionId,
+                selected_option: selectedOption,
+                current_index: currentQuestion
+            })
+        });
+    });
+});
+
+
+updateStats(); 
+
+};
+
+
+function nextQuestion() {
+    if (currentQuestion < totalQuestions - 1) {
+        currentQuestion++;
+        showQuestion(currentQuestion);
+    }
+}
+
+function prevQuestion() {
+    if (currentQuestion > 0) {
+        currentQuestion--;
+        showQuestion(currentQuestion);
+    }
+}
+
+function goToQuestion(index) {
+    currentQuestion = index;
+    showQuestion(index);
+}
+
+// ------------------ MARK FOR REVIEW ------------------
+function markForReview(index) {
+
+    let paletteBtn = document.getElementById("palette-" + index);
+
+    if (!paletteBtn.classList.contains("answered")) {
+        paletteBtn.classList.add("review");
+    }
+}
+
+
+// ------------------ LIVE STATS ------------------
+function updateStats() {
+    let answered = document.querySelectorAll("input[type=radio]:checked").length;
+
+    document.getElementById("stats").innerHTML =
+        "Answered: " + answered + " / " + totalQuestions;
+}
+
+
+
+
+document.onkeydown = function(e) {
+    if (e.ctrlKey && (e.key === 'c' || e.key === 'u')) {
+        return false;
+    }
+};
+
+//---next,previous,submit button---
+function updateNavigationButtons() {
+
+    // Hide Previous on first question
+    document.getElementById("prevBtn").style.display =
+        currentQuestion === 0 ? "none" : "inline-block";
+
+    // If last question
+    if (currentQuestion === totalQuestions - 1) {
+        document.getElementById("nextBtn").style.display = "none";
+        document.getElementById("submitBtn").style.display = "inline-block";
+    } else {
+        document.getElementById("nextBtn").style.display = "inline-block";
+        document.getElementById("submitBtn").style.display = "none";
+    }
+}
+function showQuestion(index) {
+    questions.forEach(q => q.style.display = "none");
+    questions[index].style.display = "block";
+    
+    currentQuestion = index;
+
+    updateNavigationButtons();
+}
+
+// Prevent right click
+document.addEventListener("contextmenu", e => e.preventDefault());
+
+// Prevent copy, cut, paste
+["copy","cut","paste"].forEach(event => {
+    document.addEventListener(event, e => e.preventDefault());
+});
+
+// Prevent Ctrl shortcuts & F12
+document.addEventListener("keydown", function(e) {
+    if (e.ctrlKey || e.key === "F12") {
+        e.preventDefault();
+    }
+});
+
+let alreadySubmitted = false;
+//auto submit when timer end 
+function submitExam() {
+    if (!alreadySubmitted) {
+        alreadySubmitted = true;
+        //clear saved answers after submit 
+        document.getElementById("examForm").submit();
+    }
+}
+
+function submitExamSilently() {
+    document.getElementById("examForm").submit();
+}
+
+// STRICT MODE – Single clean version
+document.addEventListener("visibilitychange", function() {
+    if (document.hidden && !alreadySubmitted && guardsEnabled) {
+        fetch("/log_violation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "Tab Switch" })
+            }).then(() => {
+                submitExam();
+            });
+        }
+    });
+
+//enforcing full
+function enterFullScreen() {
+    let elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    // enterFullScreen(); // Removed automatic fullscreen to prevent premature triggers
+});
+
+// Detect exit fullscreen
+document.addEventListener("fullscreenchange", function() {
+    if (!document.fullscreenElement && !alreadySubmitted && guardsEnabled) {
+        alert("Fullscreen exited! Exam auto submitted.");
+        submitExam();
+    }
+});
+//devtool detecting 
+
+let devtoolsOpen = false;
+
+setInterval(function() {
+    if (!guardsEnabled) return; // Wait for guards to enable
+
+    let threshold = 160;
+    if (
+        window.outerWidth - window.innerWidth > threshold ||
+        window.outerHeight - window.innerHeight > threshold
+    ) {
+        if (!devtoolsOpen && !alreadySubmitted) {
+            devtoolsOpen = true;
+            fetch("/log_violation", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "DevTools Opened" })
+            }).then(() => {
+            submitExam();
+            });
+        }
+    }
+}, 2000); // Increased interval to 2 seconds
+//print scn detected 
+document.addEventListener("keyup", function(e) {
+    if (e.key === "PrintScreen") {
+        navigator.clipboard.writeText("");
+        alert("Screenshot attempt detected!");
+    }
+});
+//Add Webcam
+async function startWebcam() {
+    try {
+        console.log("Requesting camera...");
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        const video = document.getElementById("webcam");
+
+        video.srcObject = stream;
+
+        video.onloadedmetadata = () => {
+            video.play();
+        };
+
+        console.log("Camera started successfully");
+
+    } catch (err) {
+        console.error("Camera error:", err);
+        alert("Camera error: " + err.name);
+    }
+}
+//object detection 
+ window.addEventListener("load", function () {
+
+    const video = document.getElementById("webcam");
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    setInterval(() => {
+
+        if (!video.videoWidth) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0);
+
+        const imageData = canvas.toDataURL("image/jpeg");
+
+        fetch("/detect", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({image: imageData})
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.violations.length > 0) {
+                alert("⚠ Violation Detected!");
+            }
+        });
+
+    }, 3000);
+
+});// every 3 seconds
+</script>
+</body>
+</html>
