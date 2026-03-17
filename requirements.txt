@@ -1,3 +1,8 @@
-Flask
+flask
 psycopg2-binary
+ultralytics
+opencv-python-headless
+reportlab
 gunicorn
+numpy
+werkzeug
